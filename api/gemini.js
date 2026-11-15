@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   const body = req.body || {};
   body.generationConfig = body.generationConfig || {};
-  const url = "https://generativelanguage.googleapis.com/v1beta/models/" + (body.model || "gemini-2.0-flash") + ":generateContent";
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/" + (body.model || "gemini-3.5-flash-lite") + ":generateContent";
   delete body.model;
   const r = await fetch(url, {
     method: "POST",
