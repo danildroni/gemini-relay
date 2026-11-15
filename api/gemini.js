@@ -9,6 +9,7 @@ export default async function handler(req, res) {
   const keys = [];
   if (process.env.GEMINI_KEY) keys.push(process.env.GEMINI_KEY);
   if (process.env.GEMINI_KEY2) keys.push(process.env.GEMINI_KEY2);
+  console.log("pupsik keys loaded:", keys.length);
 
   let lastStatus = 0, lastText = "";
   for (let i = 0; i < keys.length; i++) {
@@ -20,21 +21,27 @@ export default async function handler(req, res) {
         body: payload
       });
     } catch (e) {
+      console.log("pupsik key", i, "fetch threw:", String(e));
       lastStatus = 500;
       lastText = JSON.stringify({ error: { message: "fetch failed: " + String(e) } });
       continue;
     }
     const t = await r.text();
     lastStatus = r.status; lastText = t;
-    if (r.status === 429 && i + 1 < keys.length) continue;   // квота (RPM или RPD) -> следующий ключ
+    if (r.status === 429 && i + 1 < keys.length) {
+      console.log("pupsik key", i, "429 -> rotating to", i + 1);
+      continue;
+    }
+    console.log("pupsik used key", i, "status", r.status);
     res.status(r.status)
        .setHeader("Content-Type", "application/json")
        .setHeader("x-pupsik-key", String(i))
        .send(t);
-       return;                                                // 200 / 400 / 401 / 403 -> как есть, не ротируем
+       return;
   }
+  console.log("pupsik ALL KEYS EXHAUSTED, status", lastStatus);
   res.status(lastStatus)
      .setHeader("Content-Type", "application/json")
      .setHeader("x-pupsik-key", "exhausted")
-     .send(lastText);                                          // все ключи 429 -> часы сделают fallback по моделям
+     .send(lastText);
 }
